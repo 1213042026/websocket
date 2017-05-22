@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>exeClient</title>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    <style>
+    </style>
+</head>
+<body>
+<!--
+    exe客户端 生成二维码并发送
+    携带信息: 二维码，二维码接收对象的type和indentification,exe本身的身份标识(type固定为"admin")
+-->
+<div style="width: 800px;height: 600px;margin: 30px auto;text-align: center">
+    要发送的二维码:<input type="text" id="qrcode" />
+    <br/>
+    <button type="button" onclick="send()">发送二维码</button>
+</div>
+</body>
+</html>
+
+<script type="text/javascript">
+    var ws = new WebSocket("ws://127.0.0.1:8080");
+
+    //exe的身份标识 动态赋值
+    var exeIdentification = "admin";
+
+    ws.onopen = function () {
+        console.log("系统消息：建立连接成功");
+    };
+
+    ws.onerror = function () {
+        console.log("系统消息 : 出错了,请退出重试.");
+    };
+
+    //接收到用户主动push请求进行二维码生成发送
+    ws.onmessage = function (e) {
+        var msg = JSON.parse(e.data);
+        var responseType = msg.responseType;
+
+        //连接上之后发送本方identification给服务器存储
+        if (responseType == "handShake") {
+            var msg = {
+                'type' : 'connect',
+                'identification' : exeIdentification
+            };
+            var data = JSON.stringify(msg);
+            ws.send(data);
+        }
+
+        if (responseType == "request") {
+            sendMsg(msg.type, msg.identification);
+        }
+    };
+
+    //这个模拟定时推送
+    function send() {
+        var type = "account";
+        var identification = "user001";
+
+        sendMsg(type, identification);
+    }
+
+    //根据用户标识生成对应的二维码并发送
+    function sendMsg(type, identification) {
+
+        //实际qrcode获取在此修改
+        var qrCode = document.getElementById("qrcode").value;
+
+        var msg = {
+            'type': 'admin',
+            'identification' : exeIdentification,
+            'receiveTarget': {
+                'type' : type,
+                'identification' : identification,
+                'qrcode' : qrCode
+            },
+        };
+
+        var data = JSON.stringify(msg);
+        ws.send(data);
+    }
+</script>
